@@ -272,18 +272,32 @@ class FullyConnectedNet(object):
           i = l + 1
           w = self.params['W' + str(i)]
           b = self.params['b' + str(i)]
-    
-          #print(f'layer {l + 1}, w{l + 1}: {w.shape}, b{l + 1}: {b.shape}')
-          if self.normalization == "batchnorm":
+
+          fc_cache, norm_cache, relu_cache, dropout_cache = None, None, None, None
+
+          h, fc_cache = affine_forward(h, w, b)
+          if self.normalization == 'batchnorm':
             gamma = self.params['gamma' + str(i)]
             beta = self.params['beta' + str(i)]
-            bn_param = self.bn_params[l]
-            h, cache[i] = self.affine_batchnorm_relu_forward(h, w, b, gamma, beta, bn_param)
-          else:
-            h, cache[i] = affine_relu_forward(h, w, b)
-
+            h, norm_cache = batchnorm_forward(h, gamma, beta, self.bn_params[l])
+          h, relu_cache = relu_forward(h)
           if self.use_dropout:
-            h, cache[]
+            h, dropout_cache = dropout_forward(h, self.dropout_param)
+
+          cache[i] = (fc_cache, norm_cache, relu_cache, dropout_cache)
+    
+          #print(f'layer {l + 1}, w{l + 1}: {w.shape}, b{l + 1}: {b.shape}')
+          # if self.normalization == "batchnorm":
+          #   gamma = self.params['gamma' + str(i)]
+          #   beta = self.params['beta' + str(i)]
+          #   bn_param = self.bn_params[l]
+          #   h, cache[i] = self.affine_batchnorm_relu_forward(h, w, b, gamma, beta, bn_param)
+          # else:
+          #   h, cache[i] = affine_relu_forward(h, w, b)
+
+          # if self.use_dropout:
+          #   h, dropout_cache = dropout_forward(h, self.dropout_param)
+          #   cache[i] = (*cache[i], dropout_cache)
 
         scores, cache[self.num_layers] = affine_forward(
           h, 
@@ -320,16 +334,29 @@ class FullyConnectedNet(object):
           if (i == self.num_layers):
             dx, dw, db = affine_backward(dx, cache[i])
           else:
-            if self.normalization == "batchnorm":
-              dx, dw, db, dgamma, dbeta = \
-                self.affine_batchnorm_relu_backward(dx, cache[i])
-              
+            fc_cache, norm_cache, relu_cache, dropout_cache = cache[i]
+            if dropout_cache:
+              dx = dropout_backward(dx, dropout_cache)
+            dx = relu_backward(dx, relu_cache)
+            if norm_cache:
+              dx, dgamma, dbeta = batchnorm_backward(dx, norm_cache)
               grads['gamma' + str(i)] = dgamma
               grads['beta' + str(i)] = dbeta
-            else:
-              dx, dw, db = affine_relu_backward(dx, cache[i])
+            dx, dw, db = affine_backward(dx, fc_cache)
           grads['W' + str(i)] = dw + self.reg * self.params['W' + str(i)]
           grads['b' + str(i)] = db + self.reg * self.params['b' + str(i)]
+
+          # else:
+          #   if self.normalization == "batchnorm":
+          #     dx, dw, db, dgamma, dbeta = \
+          #       self.affine_batchnorm_relu_backward(dx, cache[i])
+              
+          #     grads['gamma' + str(i)] = dgamma
+          #     grads['beta' + str(i)] = dbeta
+          #   else:
+          #     dx, dw, db = affine_relu_backward(dx, cache[i])
+          # grads['W' + str(i)] = dw + self.reg * self.params['W' + str(i)]
+          # grads['b' + str(i)] = db + self.reg * self.params['b' + str(i)]
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
