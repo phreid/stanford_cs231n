@@ -344,19 +344,7 @@ class FullyConnectedNet(object):
               grads['beta' + str(i)] = dbeta
             dx, dw, db = affine_backward(dx, fc_cache)
           grads['W' + str(i)] = dw + self.reg * self.params['W' + str(i)]
-          for grads['b' + str(i)] = db + self.reg * self.params['b' + str(i)]
-
-          # else:
-          #   if self.normalization == "batchnorm":
-          #     dx, dw, db, dgamma, dbeta = \
-          #       self.affine_batchnorm_relu_backward(dx, cache[i])
-              
-          #     grads['gamma' + str(i)] = dgamma
-          #     grads['beta' + str(i)] = dbeta
-          #   else:
-          #     dx, dw, db = affine_relu_backward(dx, cache[i])
-          # grads['W' + str(i)] = dw + self.reg * self.params['W' + str(i)]
-          # grads['b' + str(i)] = db + self.reg * self.params['b' + str(i)]
+          grads['b' + str(i)] = db + self.reg * self.params['b' + str(i)]
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
