@@ -543,7 +543,7 @@ def conv_forward_naive(x, w, b, conv_param):
     n, c, h1, w1 = x.shape
     f, _, hh, ww = w.shape
     stride, pad = conv_param['stride'], conv_param['pad']
-    h2 = 1 + (h1 + 2 * pad - hh) // stride  # Use `//` for python3
+    h2 = 1 + (h1 + 2 * pad - hh) // stride 
     w2 = 1 + (w1 + 2 * pad - ww) // stride
     out = np.zeros((n, f, h2, w2))
     ###########################################################################
@@ -587,7 +587,36 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    x, w, b, conv_param = cache
+    n, c, h1, w1 = x.shape
+    f, _, hh, ww = w.shape
+    _, _, h2, w2 = dout.shape
+    stride, pad = conv_param['stride'], conv_param['pad']
+
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant')
+
+    dx_pad = np.zeros_like(x_pad)
+    dw = np.zeros_like(w)
+    db = np.zeros_like(b)
+
+    for num in range(n):
+        for fil in range(f):
+            db[fil] += np.sum(dout[num, fil]) 
+            for row in range(h2):
+                for col in range(w2):
+                    dx_pad[
+                      num, 
+                      :, 
+                      row*stride:row*stride+hh, 
+                      col*stride:col*stride+ww] += \
+                        dout[num, fil, row, col] * w[fil]
+                    dw[fil] += x_pad[
+                        num, 
+                        :, 
+                        row*stride:row*stride+hh, 
+                        col*stride:col*stride+ww] * dout[num, fil, row, col]
+
+    dx = dx_pad[:, :, pad:pad+h1, pad:pad+w1]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -617,7 +646,24 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # TODO: Implement the max-pooling forward pass                            #
     ###########################################################################
-    pass
+    n, c, h1, w1 = x.shape
+    ph, pw, stride = (
+      pool_param['pool_height'], 
+      pool_param['pool_width'], 
+      pool_param['stride'])
+    h2 = 1 + (h1 - ph) // stride
+    w2 = 1 + (w1 - pw) // stride
+    out = np.zeros((n, c, h2, w2))
+
+    for num in range(n):
+      for row in range(h2):
+        for col in range(w2):
+          out[num, :, row, col] = np.max(
+            x[
+              num, 
+              :, 
+              row*stride:row*stride+ph, 
+              col*stride:col*stride+pw], axis = (1, 2))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -640,7 +686,32 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the max-pooling backward pass                           #
     ###########################################################################
-    pass
+    x, pool_param = cache
+    n, c, h1, w1 = x.shape
+    ph, pw, stride = (
+      pool_param['pool_height'], 
+      pool_param['pool_width'], 
+      pool_param['stride'])
+    h2 = 1 + (h1 - ph) // stride
+    w2 = 1 + (w1 - pw) // stride
+    dx = np.zeros_like(x)
+
+    for num in range(n):
+      for chan in range(c):
+        for row in range(h2):
+          for col in range(w2):
+            pool_window = x[
+              num, 
+              chan, 
+              row*stride:row*stride+ph, 
+              col*stride:col*stride+pw]
+
+            mask = pool_window == np.max(pool_window)
+            dx[
+              num, 
+              chan, 
+              row*stride:row*stride+ph, 
+              col*stride:col*stride+pw] = dout[num, chan, row, col] * mask
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
